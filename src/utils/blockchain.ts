@@ -36,17 +36,24 @@ export const formatTokenAmount = (amount: bigint, decimals: number): string => {
   return num.toFixed(2);
 };
 
+// Helper function to chunk array into smaller batches
+const chunkArray = <T,>(array: T[], size: number): T[][] => {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    chunks.push(array.slice(i, i + size));
+  }
+  return chunks;
+};
+
 // Fetch token distribution data
 export const fetchDistributionData = async (): Promise<DashboardData> => {
   try {
     const provider = getProvider();
     const tokenContract = getTokenContract(provider);
 
-    // Fetch total supply and decimals
-    const [totalSupplyBN, decimals] = await Promise.all([
-      tokenContract.totalSupply(),
-      tokenContract.decimals(),
-    ]);
+    // Fetch total supply and decimals sequentially to avoid batch limit
+    const totalSupplyBN = await tokenContract.totalSupply();
+    const decimals = await tokenContract.decimals();
 
     const totalSupply = totalSupplyBN;
 
@@ -57,11 +64,16 @@ export const fetchDistributionData = async (): Promise<DashboardData> => {
     for (const [_key, protocol] of Object.entries(PROTOCOLS)) {
       if (protocol.addresses.length === 0) continue;
 
-      // Fetch balances for all addresses in this protocol
-      const balancePromises = protocol.addresses.map(address =>
-        tokenContract.balanceOf(address)
-      );
-      const balances = await Promise.all(balancePromises);
+      // Batch requests in groups of 3 to respect free tier limit
+      const addressChunks = chunkArray(protocol.addresses, 3);
+      const balances: bigint[] = [];
+
+      for (const chunk of addressChunks) {
+        const chunkBalances = await Promise.all(
+          chunk.map(address => tokenContract.balanceOf(address))
+        );
+        balances.push(...chunkBalances);
+      }
 
       // Sum up all balances for this protocol
       const totalBalance = balances.reduce((sum, bal) => sum + bal, 0n);
