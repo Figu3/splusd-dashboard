@@ -26,6 +26,7 @@ export const PROTOCOLS: Record<string, ProtocolConfig> = {
       '0x888888888889758F76e7103c6CbF23ABbF58F946', // Router
       '0x28dE02Ac3c3F5ef427e55c321F73fDc7F192e8E4', // Market Factory
       '0x0d7432A9f5C51fdd2407332D90D9b814827982Bf', // vePendle
+      '0xad96C88eC5D39fc5020851075ECb756B2b228060', // Pendle LP Contract
     ],
     color: '#10b981',
   },
