@@ -8,13 +8,20 @@ import {
 } from '../config';
 import type { TokenDistribution, DashboardData } from '../types';
 
-// Initialize provider with fallback
+// Initialize provider with fallback and explicit network config
 export const getProvider = (): ethers.JsonRpcProvider => {
+  // Create static network to prevent ENS lookups
+  const network = new ethers.Network('plasma', 9745);
+
   try {
-    return new ethers.JsonRpcProvider(PLASMA_RPC_URL);
+    return new ethers.JsonRpcProvider(PLASMA_RPC_URL, network, {
+      staticNetwork: network,
+    });
   } catch (error) {
     console.warn('Primary RPC failed, using fallback');
-    return new ethers.JsonRpcProvider(PLASMA_FALLBACK_RPC);
+    return new ethers.JsonRpcProvider(PLASMA_FALLBACK_RPC, network, {
+      staticNetwork: network,
+    });
   }
 };
 
