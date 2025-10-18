@@ -17,6 +17,7 @@ export const PROTOCOLS: Record<string, ProtocolConfig> = {
       '0x71a870D1c935C2146b87644DF3B5316e8756aE18', // Factory
       '0x2Eff716Caa7F9EB441861340998B0952AF056686', // VotingEscrow
       '0x2AF460a511849A7aA37Ac964074475b0E6249c69', // Voter
+      '0x55078defe265a66451fd9da109e7362a70b3fdac', // splUSD/plUSD Pool
     ],
     color: '#8b5cf6',
   },
