@@ -14,14 +14,20 @@ export const getProvider = (): ethers.JsonRpcProvider => {
   const network = new ethers.Network('plasma', 9745);
 
   try {
-    return new ethers.JsonRpcProvider(PLASMA_RPC_URL, network, {
-      staticNetwork: network,
+    const provider = new ethers.JsonRpcProvider(PLASMA_RPC_URL, network, {
+      staticNetwork: true,
     });
+    // Disable ENS resolution completely
+    provider.getResolver = async () => null;
+    return provider;
   } catch (error) {
     console.warn('Primary RPC failed, using fallback');
-    return new ethers.JsonRpcProvider(PLASMA_FALLBACK_RPC, network, {
-      staticNetwork: network,
+    const provider = new ethers.JsonRpcProvider(PLASMA_FALLBACK_RPC, network, {
+      staticNetwork: true,
     });
+    // Disable ENS resolution completely
+    provider.getResolver = async () => null;
+    return provider;
   }
 };
 
