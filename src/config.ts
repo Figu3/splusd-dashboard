@@ -2,8 +2,8 @@ import type { ProtocolConfig } from './types';
 
 // Plasma Chain Configuration
 export const PLASMA_CHAIN_ID = 9745;
-export const PLASMA_RPC_URL = 'https://plasma.drpc.org';
-export const PLASMA_FALLBACK_RPC = 'https://rpc.plasma.to';
+export const PLASMA_RPC_URL = 'https://rpc.plasma.to';
+export const PLASMA_FALLBACK_RPC = 'https://plasma.drpc.org';
 
 // splUSD Token
 export const SPLUSD_TOKEN_ADDRESS = '0x616185600989Bf8339b58aC9e539d49536598343';
