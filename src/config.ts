@@ -34,7 +34,7 @@ export const PROTOCOLS: Record<string, ProtocolConfig> = {
   euler: {
     name: 'Euler Protocol',
     addresses: [
-      '0x93827c26602b0573500D2eC80dB19EEf76BaB', // Euler Frontier Vault
+      '0x93827c26602b0573500D2eC80dB19D54EEf76BaB', // Euler Frontier Vault
     ],
     color: '#f59e0b',
   },
