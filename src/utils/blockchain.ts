@@ -42,9 +42,11 @@ export const fetchDistributionData = async (): Promise<DashboardData> => {
     const provider = getProvider();
     const tokenContract = getTokenContract(provider);
 
-    // Fetch total supply and decimals sequentially to avoid batch limit
-    const totalSupplyBN = await tokenContract.totalSupply();
-    const decimals = await tokenContract.decimals();
+    // Fetch total supply and decimals in parallel (Alchemy supports batching)
+    const [totalSupplyBN, decimals] = await Promise.all([
+      tokenContract.totalSupply(),
+      tokenContract.decimals(),
+    ]);
 
     const totalSupply = totalSupplyBN;
 
@@ -55,12 +57,11 @@ export const fetchDistributionData = async (): Promise<DashboardData> => {
     for (const [_key, protocol] of Object.entries(PROTOCOLS)) {
       if (protocol.addresses.length === 0) continue;
 
-      // Fetch balances sequentially to avoid any batching
-      const balances: bigint[] = [];
-      for (const address of protocol.addresses) {
-        const balance = await tokenContract.balanceOf(address);
-        balances.push(balance);
-      }
+      // Fetch all balances in parallel (Alchemy supports batch requests well)
+      const balancePromises = protocol.addresses.map(address =>
+        tokenContract.balanceOf(address)
+      );
+      const balances = await Promise.all(balancePromises);
 
       // Sum up all balances for this protocol
       const totalBalance = balances.reduce((sum, bal) => sum + bal, 0n);
