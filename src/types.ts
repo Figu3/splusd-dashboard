@@ -7,10 +7,17 @@ export interface TokenDistribution {
   address?: string;
 }
 
+export interface IdleWalletHistoryPoint {
+  timestamp: number;
+  percentage: number;
+  date: string;
+}
+
 export interface DashboardData {
   totalSupply: string;
   distributions: TokenDistribution[];
   lastUpdate: number;
+  idleWalletHistory?: IdleWalletHistoryPoint[];
   error?: string;
 }
 

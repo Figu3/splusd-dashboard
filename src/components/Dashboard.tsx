@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Header } from './Header';
 import { DistributionCard } from './DistributionCard';
 import { DistributionChart } from './DistributionChart';
+import { IdleWalletHistoryChart } from './IdleWalletHistoryChart';
 import { ErrorMessage } from './ErrorMessage';
 import { LoadingSpinner } from './LoadingSpinner';
 import type { DashboardData } from '../types';
@@ -80,6 +81,12 @@ export const Dashboard = () => {
 
         {data && data.distributions.length > 0 && (
           <>
+            {data.idleWalletHistory && data.idleWalletHistory.length > 0 && (
+              <div className="mb-6">
+                <IdleWalletHistoryChart history={data.idleWalletHistory} />
+              </div>
+            )}
+
             <div className="mb-6">
               <DistributionChart distributions={data.distributions} />
             </div>
