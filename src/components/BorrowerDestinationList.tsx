@@ -1,5 +1,5 @@
 import type { BorrowerDestination } from '../types';
-import { ArrowRight, Repeat, Bridge, Package } from 'lucide-react';
+import { ArrowRight, Repeat, ArrowRightLeft, Package } from 'lucide-react';
 
 interface BorrowerDestinationListProps {
   destinations: BorrowerDestination[];
@@ -20,7 +20,7 @@ export const BorrowerDestinationList = ({ destinations }: BorrowerDestinationLis
       case 'swap':
         return <Repeat className="w-4 h-4" />;
       case 'bridge':
-        return <Bridge className="w-4 h-4" />;
+        return <ArrowRightLeft className="w-4 h-4" />;
       case 'deposit':
         return <Package className="w-4 h-4" />;
       default:

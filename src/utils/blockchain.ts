@@ -122,59 +122,61 @@ export const analyzeBorrowerDestinations = async (
     const destinations = new Map<string, { amount: bigint; type: string; name: string }>();
 
     for (const event of transferEvents) {
-      if (!event.args) continue;
+      // Type guard to check if it's an EventLog with args
+      if ('args' in event && event.args) {
+        const borrower = event.args[1]; // 'to' address
 
-      const borrower = event.args[1]; // 'to' address
-      const amount = event.args[2];
+        // Get the next transaction from the borrower to see where they sent the USDT0
+        // For now, we'll track immediate transfers from borrowers
+        const borrowerFilter = usdt0Contract.filters.Transfer(borrower, null);
+        try {
+          const borrowerTransfers = await usdt0Contract.queryFilter(
+            borrowerFilter,
+            event.blockNumber,
+            Math.min(event.blockNumber + 100, currentBlock)
+          );
 
-      // Get the next transaction from the borrower to see where they sent the USDT0
-      // For now, we'll track immediate transfers from borrowers
-      const borrowerFilter = usdt0Contract.filters.Transfer(borrower, null);
-      try {
-        const borrowerTransfers = await usdt0Contract.queryFilter(
-          borrowerFilter,
-          event.blockNumber,
-          Math.min(event.blockNumber + 100, currentBlock)
-        );
+          for (const transfer of borrowerTransfers) {
+            // Type guard to check if it's an EventLog with args
+            if ('args' in transfer && transfer.args) {
+              const destination = transfer.args[1];
+              const transferAmount = transfer.args[2];
 
-        for (const transfer of borrowerTransfers) {
-          if (!transfer.args) continue;
-          const destination = transfer.args[1];
-          const transferAmount = transfer.args[2];
+              // Identify the destination
+              const knownContract = KNOWN_CONTRACTS[destination.toLowerCase()];
+              let destName = 'Unknown Protocol';
+              let destType = 'unknown';
 
-          // Identify the destination
-          const knownContract = KNOWN_CONTRACTS[destination.toLowerCase()];
-          let destName = 'Unknown Protocol';
-          let destType = 'unknown';
+              if (knownContract) {
+                destName = knownContract.name;
+                destType = knownContract.type;
+              } else {
+                // Check if it's one of our tracked protocols
+                for (const protocol of Object.values(PROTOCOLS)) {
+                  if (protocol.addresses.map(a => a.toLowerCase()).includes(destination.toLowerCase())) {
+                    destName = protocol.name;
+                    destType = 'deposit';
+                    break;
+                  }
+                }
+              }
 
-          if (knownContract) {
-            destName = knownContract.name;
-            destType = knownContract.type;
-          } else {
-            // Check if it's one of our tracked protocols
-            for (const [key, protocol] of Object.entries(PROTOCOLS)) {
-              if (protocol.addresses.map(a => a.toLowerCase()).includes(destination.toLowerCase())) {
-                destName = protocol.name;
-                destType = 'deposit';
-                break;
+              const destinationKey = `${destName}-${destType}`;
+              const existing = destinations.get(destinationKey);
+              if (existing) {
+                existing.amount += transferAmount;
+              } else {
+                destinations.set(destinationKey, {
+                  amount: transferAmount,
+                  type: destType,
+                  name: destName,
+                });
               }
             }
           }
-
-          const key = `${destName}-${destType}`;
-          const existing = destinations.get(key);
-          if (existing) {
-            existing.amount += transferAmount;
-          } else {
-            destinations.set(key, {
-              amount: transferAmount,
-              type: destType,
-              name: destName,
-            });
-          }
+        } catch (error) {
+          console.warn('Error tracking borrower transfer:', error);
         }
-      } catch (error) {
-        console.warn('Error tracking borrower transfer:', error);
       }
     }
 
