@@ -8,6 +8,9 @@ export const PLASMA_FALLBACK_RPC = 'https://rpc.plasma.to';
 // splUSD Token
 export const SPLUSD_TOKEN_ADDRESS = '0x616185600989Bf8339b58aC9e539d49536598343';
 
+// USDT0 Token (used in Euler vaults)
+export const USDT0_TOKEN_ADDRESS = '0x5f0c5F854C2D34F34B69CF63217C0C5EA1F1A13d';
+
 // Protocol Configurations
 export const PROTOCOLS: Record<string, ProtocolConfig> = {
   lithos: {
@@ -56,3 +59,21 @@ export const ERC20_ABI = [
 
 // Update interval (in milliseconds)
 export const UPDATE_INTERVAL = 30000; // 30 seconds
+
+// Known contract addresses for destination tracking
+export const KNOWN_CONTRACTS: Record<string, { name: string; type: 'swap' | 'bridge' | 'deposit' }> = {
+  // Lithos DEX (Swaps)
+  '0xD70962bd7C6B3567a8c893b55a8aBC1E151759f3': { name: 'Lithos DEX Router', type: 'swap' },
+  '0xC7E4BCC695a9788fd0f952250cA058273BE7F6A3': { name: 'Lithos Global Router', type: 'swap' },
+  '0x55078defe265a66451fd9da109e7362a70b3fdac': { name: 'Lithos splUSD/plUSD Pool', type: 'deposit' },
+
+  // Pendle (Deposits)
+  '0x888888888889758F76e7103c6CbF23ABbF58F946': { name: 'Pendle Router', type: 'deposit' },
+  '0xad96C88eC5D39fc5020851075ECb756B2b228060': { name: 'Pendle LP Contract', type: 'deposit' },
+
+  // Bridges (common bridge contracts)
+  '0x10E6593CDda8c58a1d0f14C5164B376352a55f2F': { name: 'Stargate Bridge', type: 'bridge' },
+  '0x1a44076050125825900e736c501f859c50fE728c': { name: 'Across Bridge', type: 'bridge' },
+
+  // Add more as discovered
+};

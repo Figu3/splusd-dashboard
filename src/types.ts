@@ -1,3 +1,15 @@
+export type DestinationType = 'swap' | 'bridge' | 'deposit' | 'unknown';
+
+export interface BorrowerDestination {
+  protocol: string;
+  type: DestinationType;
+  amount: string;
+  percentage: number;
+  address?: string;
+  color?: string;
+  description?: string;
+}
+
 export interface TokenDistribution {
   location: string;
   amount: string;
@@ -5,6 +17,7 @@ export interface TokenDistribution {
   usdValue?: string;
   change24h?: number;
   address?: string;
+  borrowerDestinations?: BorrowerDestination[];
 }
 
 export interface IdleWalletHistoryPoint {

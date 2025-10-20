@@ -3,13 +3,18 @@ import {
   PLASMA_RPC_URL,
   PLASMA_FALLBACK_RPC,
   SPLUSD_TOKEN_ADDRESS,
+  USDT0_TOKEN_ADDRESS,
   PROTOCOLS,
   ERC20_ABI,
+  KNOWN_CONTRACTS,
 } from '../config';
-import type { TokenDistribution, DashboardData, IdleWalletHistoryPoint } from '../types';
+import type { TokenDistribution, DashboardData, IdleWalletHistoryPoint, BorrowerDestination } from '../types';
 
 // Local storage key for historical data
 const HISTORY_STORAGE_KEY = 'splusd_idle_wallet_history';
+
+// Euler Vault address
+const EULER_VAULT_ADDRESS = '0x93827c26602b0573500D2eC80dB19D54EEf76BaB';
 
 // Initialize provider with fallback and explicit network config
 export const getProvider = (): ethers.JsonRpcProvider => {
@@ -98,6 +103,139 @@ const addHistoricalDataPoint = (percentage: number): IdleWalletHistoryPoint[] =>
   return history;
 };
 
+// Analyze where borrowed USDT0 from Euler vault goes
+export const analyzeBorrowerDestinations = async (
+  provider: ethers.JsonRpcProvider
+): Promise<BorrowerDestination[]> => {
+  try {
+    const usdt0Contract = new ethers.Contract(USDT0_TOKEN_ADDRESS, ERC20_ABI, provider);
+
+    // Get recent transfer events from the Euler vault (last 10000 blocks ~7 days)
+    const currentBlock = await provider.getBlockNumber();
+    const fromBlock = Math.max(0, currentBlock - 10000);
+
+    // Get Transfer events where Euler vault is the sender (borrowers receiving USDT0)
+    const transferFilter = usdt0Contract.filters.Transfer(EULER_VAULT_ADDRESS, null);
+    const transferEvents = await usdt0Contract.queryFilter(transferFilter, fromBlock, currentBlock);
+
+    // Track destinations
+    const destinations = new Map<string, { amount: bigint; type: string; name: string }>();
+
+    for (const event of transferEvents) {
+      if (!event.args) continue;
+
+      const borrower = event.args[1]; // 'to' address
+      const amount = event.args[2];
+
+      // Get the next transaction from the borrower to see where they sent the USDT0
+      // For now, we'll track immediate transfers from borrowers
+      const borrowerFilter = usdt0Contract.filters.Transfer(borrower, null);
+      try {
+        const borrowerTransfers = await usdt0Contract.queryFilter(
+          borrowerFilter,
+          event.blockNumber,
+          Math.min(event.blockNumber + 100, currentBlock)
+        );
+
+        for (const transfer of borrowerTransfers) {
+          if (!transfer.args) continue;
+          const destination = transfer.args[1];
+          const transferAmount = transfer.args[2];
+
+          // Identify the destination
+          const knownContract = KNOWN_CONTRACTS[destination.toLowerCase()];
+          let destName = 'Unknown Protocol';
+          let destType = 'unknown';
+
+          if (knownContract) {
+            destName = knownContract.name;
+            destType = knownContract.type;
+          } else {
+            // Check if it's one of our tracked protocols
+            for (const [key, protocol] of Object.entries(PROTOCOLS)) {
+              if (protocol.addresses.map(a => a.toLowerCase()).includes(destination.toLowerCase())) {
+                destName = protocol.name;
+                destType = 'deposit';
+                break;
+              }
+            }
+          }
+
+          const key = `${destName}-${destType}`;
+          const existing = destinations.get(key);
+          if (existing) {
+            existing.amount += transferAmount;
+          } else {
+            destinations.set(key, {
+              amount: transferAmount,
+              type: destType,
+              name: destName,
+            });
+          }
+        }
+      } catch (error) {
+        console.warn('Error tracking borrower transfer:', error);
+      }
+    }
+
+    // Calculate total and convert to BorrowerDestination array
+    const totalAmount = Array.from(destinations.values()).reduce(
+      (sum, dest) => sum + dest.amount,
+      0n
+    );
+
+    const decimals = 6; // USDT0 typically uses 6 decimals
+
+    const result: BorrowerDestination[] = Array.from(destinations.entries()).map(([_, dest]) => {
+      const percentage = totalAmount > 0n
+        ? Number((dest.amount * 10000n) / totalAmount) / 100
+        : 0;
+
+      return {
+        protocol: dest.name,
+        type: dest.type as any,
+        amount: formatTokenAmount(dest.amount, decimals),
+        percentage,
+        color: getColorForDestinationType(dest.type),
+        description: getDescriptionForType(dest.type),
+      };
+    });
+
+    return result.sort((a, b) => b.percentage - a.percentage);
+  } catch (error) {
+    console.error('Error analyzing borrower destinations:', error);
+    return [];
+  }
+};
+
+// Helper function to get color for destination type
+const getColorForDestinationType = (type: string): string => {
+  switch (type) {
+    case 'swap':
+      return '#f59e0b'; // amber
+    case 'bridge':
+      return '#8b5cf6'; // purple
+    case 'deposit':
+      return '#10b981'; // green
+    default:
+      return '#6b7280'; // gray
+  }
+};
+
+// Helper function to get description for type
+const getDescriptionForType = (type: string): string => {
+  switch (type) {
+    case 'swap':
+      return 'Swapped to other tokens';
+    case 'bridge':
+      return 'Bridged to other chains';
+    case 'deposit':
+      return 'Deposited in protocol';
+    default:
+      return 'Unknown destination';
+  }
+};
+
 // Fetch token distribution data
 export const fetchDistributionData = async (): Promise<DashboardData> => {
   try {
@@ -131,12 +269,26 @@ export const fetchDistributionData = async (): Promise<DashboardData> => {
 
       if (totalBalance > 0n) {
         const percentage = Number((totalBalance * 10000n) / totalSupply) / 100;
-        distributions.push({
+        const distribution: TokenDistribution = {
           location: protocol.name,
           amount: formatTokenAmount(totalBalance, decimals),
           percentage,
           address: protocol.addresses[0], // Show primary address
-        });
+        };
+
+        // For Euler Protocol, analyze borrower destinations
+        if (_key === 'euler') {
+          try {
+            const borrowerDestinations = await analyzeBorrowerDestinations(provider);
+            if (borrowerDestinations.length > 0) {
+              distribution.borrowerDestinations = borrowerDestinations;
+            }
+          } catch (error) {
+            console.warn('Failed to analyze Euler borrower destinations:', error);
+          }
+        }
+
+        distributions.push(distribution);
       }
     }
 

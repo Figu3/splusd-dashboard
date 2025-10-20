@@ -1,11 +1,15 @@
+import { useState } from 'react';
 import type { TokenDistribution } from '../types';
 import { PROTOCOLS } from '../config';
+import { BorrowerDestinationList } from './BorrowerDestinationList';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface DistributionCardProps {
   distribution: TokenDistribution;
 }
 
 export const DistributionCard = ({ distribution }: DistributionCardProps) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const getProtocolColor = (location: string): string => {
     if (location === 'Idle Wallets') return '#6b7280';
 
@@ -83,6 +87,34 @@ export const DistributionCard = ({ distribution }: DistributionCardProps) => {
           }}
         />
       </div>
+
+      {/* Expandable section for Euler borrower destinations */}
+      {distribution.borrowerDestinations && distribution.borrowerDestinations.length > 0 && (
+        <>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="mt-4 w-full flex items-center justify-between p-3 bg-plasma-darker rounded-lg hover:bg-plasma-dark transition-colors"
+          >
+            <span className="text-sm font-medium text-gray-300 flex items-center gap-2">
+              <span>Borrowed USDT0 Flow</span>
+              <span className="text-xs text-gray-500">
+                ({distribution.borrowerDestinations.length} destinations)
+              </span>
+            </span>
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            )}
+          </button>
+
+          {isExpanded && (
+            <div className="overflow-hidden transition-all duration-300">
+              <BorrowerDestinationList destinations={distribution.borrowerDestinations} />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };
