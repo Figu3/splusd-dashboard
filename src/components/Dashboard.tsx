@@ -107,7 +107,7 @@ export const Dashboard = () => {
 
             {/* Idle Wallet History - Collapsible */}
             {data.idleWalletHistory && data.idleWalletHistory.length > 0 && (
-              <details className="group mt-6">
+              <details className="group mt-6 max-w-4xl mx-auto">
                 <summary className="cursor-pointer list-none">
                   <div className="bg-plasma-card border border-plasma-border rounded-xl p-4 hover:border-plasma-accent/50 transition-all">
                     <div className="flex items-center justify-between">

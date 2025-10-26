@@ -14,6 +14,11 @@ export const DistributionCard = ({ distribution }: DistributionCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const color = getProtocolColor(distribution.location);
 
+  // Debug logging for Pendle
+  if (distribution.location === 'Pendle Protocol') {
+    console.log('Pendle card rendering, breakdown:', distribution.pendleBreakdown);
+  }
+
   return (
     <div className="bg-plasma-card border border-plasma-border rounded-xl p-5 hover:border-plasma-accent/50 transition-all shadow-lg hover:shadow-xl">
       <div className="flex items-start justify-between mb-4">

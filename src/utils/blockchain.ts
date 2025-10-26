@@ -575,9 +575,14 @@ export const fetchDistributionData = async (): Promise<DashboardData> => {
         // For Pendle Protocol, add SY/PT/YT breakdown
         if (_key === 'pendle') {
           try {
+            console.log('Fetching Pendle breakdown...');
             const pendleBreakdown = await fetchPendleBreakdown(provider, decimals);
+            console.log('Pendle breakdown result:', pendleBreakdown);
             if (pendleBreakdown) {
               distribution.pendleBreakdown = pendleBreakdown;
+              console.log('Pendle breakdown added to distribution');
+            } else {
+              console.log('Pendle breakdown was null or empty');
             }
           } catch (error) {
             console.error('Failed to fetch Pendle breakdown:', error);
