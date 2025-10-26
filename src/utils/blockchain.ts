@@ -159,38 +159,46 @@ const addTVLHistoricalDataPoint = (tvlRaw: string, tvlFormatted: string): TVLHis
 // Fetch Pendle SY/PT/YT breakdown
 const fetchPendleBreakdown = async (
   provider: ethers.JsonRpcProvider,
-  decimals: number
+  decimals: number,
+  _totalPendleBalance: bigint
 ): Promise<PendleBreakdown | null> => {
   try {
-    const syContract = new ethers.Contract(PENDLE_SY_TOKEN, ERC20_ABI, provider);
-    const ptContract = new ethers.Contract(PENDLE_PT_TOKEN, ERC20_ABI, provider);
-    const ytContract = new ethers.Contract(PENDLE_YT_TOKEN, ERC20_ABI, provider);
+    const splUsdContract = new ethers.Contract(SPLUSD_TOKEN_ADDRESS, ERC20_ABI, provider);
 
-    // Fetch balances in parallel
-    const [syBalance, ptBalance, ytBalance] = await Promise.all([
-      syContract.balanceOf(SPLUSD_TOKEN_ADDRESS),
-      ptContract.balanceOf(SPLUSD_TOKEN_ADDRESS),
-      ytContract.balanceOf(SPLUSD_TOKEN_ADDRESS),
+    console.log('Checking splUSD balances held by Pendle tokens...');
+
+    // The SY token holds the underlying splUSD
+    // PT and YT represent claims on future yield
+    // We need to check how much splUSD each token contract holds
+    const [syHeldSplUsd, ptHeldSplUsd, ytHeldSplUsd] = await Promise.all([
+      splUsdContract.balanceOf(PENDLE_SY_TOKEN),
+      splUsdContract.balanceOf(PENDLE_PT_TOKEN),
+      splUsdContract.balanceOf(PENDLE_YT_TOKEN),
     ]);
 
-    const totalPendleBalance = syBalance + ptBalance + ytBalance;
+    console.log('SY holds:', ethers.formatUnits(syHeldSplUsd, decimals), 'splUSD');
+    console.log('PT holds:', ethers.formatUnits(ptHeldSplUsd, decimals), 'splUSD');
+    console.log('YT holds:', ethers.formatUnits(ytHeldSplUsd, decimals), 'splUSD');
 
-    if (totalPendleBalance === 0n) {
+    const totalTrackedBalance = syHeldSplUsd + ptHeldSplUsd + ytHeldSplUsd;
+
+    if (totalTrackedBalance === 0n) {
+      console.log('No splUSD found in Pendle token contracts');
       return null;
     }
 
     return {
       sy: {
-        amount: formatTokenAmount(syBalance, decimals),
-        percentage: Number((syBalance * 10000n) / totalPendleBalance) / 100,
+        amount: formatTokenAmount(syHeldSplUsd, decimals),
+        percentage: Number((syHeldSplUsd * 10000n) / totalTrackedBalance) / 100,
       },
       pt: {
-        amount: formatTokenAmount(ptBalance, decimals),
-        percentage: Number((ptBalance * 10000n) / totalPendleBalance) / 100,
+        amount: formatTokenAmount(ptHeldSplUsd, decimals),
+        percentage: Number((ptHeldSplUsd * 10000n) / totalTrackedBalance) / 100,
       },
       yt: {
-        amount: formatTokenAmount(ytBalance, decimals),
-        percentage: Number((ytBalance * 10000n) / totalPendleBalance) / 100,
+        amount: formatTokenAmount(ytHeldSplUsd, decimals),
+        percentage: Number((ytHeldSplUsd * 10000n) / totalTrackedBalance) / 100,
       },
     };
   } catch (error) {
@@ -576,7 +584,7 @@ export const fetchDistributionData = async (): Promise<DashboardData> => {
         if (_key === 'pendle') {
           try {
             console.log('Fetching Pendle breakdown...');
-            const pendleBreakdown = await fetchPendleBreakdown(provider, decimals);
+            const pendleBreakdown = await fetchPendleBreakdown(provider, decimals, totalBalance);
             console.log('Pendle breakdown result:', pendleBreakdown);
             if (pendleBreakdown) {
               distribution.pendleBreakdown = pendleBreakdown;
