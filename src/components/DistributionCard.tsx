@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import type { TokenDistribution } from '../types';
-import { PROTOCOLS } from '../config';
 import { BorrowerDestinationList } from './BorrowerDestinationList';
 import { BorrowerDetailsList } from './BorrowerDetailsList';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { getProtocolColor } from '../utils/colors';
+import { shortenAddress } from '../utils/format';
 
 interface DistributionCardProps {
   distribution: TokenDistribution;
@@ -11,64 +12,55 @@ interface DistributionCardProps {
 
 export const DistributionCard = ({ distribution }: DistributionCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const getProtocolColor = (location: string): string => {
-    if (location === 'Idle Wallets') return '#6b7280';
-
-    const protocolKey = Object.keys(PROTOCOLS).find(key =>
-      PROTOCOLS[key].name === location
-    );
-    return protocolKey ? PROTOCOLS[protocolKey].color : '#6b7280';
-  };
-
   const color = getProtocolColor(distribution.location);
 
   return (
-    <div className="bg-plasma-card border border-plasma-border rounded-lg p-5 hover:border-plasma-accent transition-colors">
-      <div className="flex items-start justify-between mb-3">
+    <div className="bg-plasma-card border border-plasma-border rounded-xl p-5 hover:border-plasma-accent/50 transition-all shadow-lg hover:shadow-xl">
+      <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div
-            className="w-3 h-3 rounded-full"
+            className="w-2.5 h-2.5 rounded-full"
             style={{ backgroundColor: color }}
           />
-          <h3 className="text-lg font-semibold text-white">
+          <h3 className="text-base font-semibold text-white">
             {distribution.location}
           </h3>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-bold text-white">
+          <div className="text-xl font-bold text-white">
             {distribution.percentage.toFixed(2)}%
           </div>
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2.5 mb-4">
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-400">Amount</span>
-          <span className="text-sm font-medium text-white">
-            {distribution.amount} splUSD
+          <span className="text-xs text-gray-400 uppercase tracking-wide">Amount</span>
+          <span className="text-sm font-semibold text-white">
+            {distribution.amount}
           </span>
         </div>
 
         {distribution.address && (
           <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-400">Address</span>
+            <span className="text-xs text-gray-400 uppercase tracking-wide">Address</span>
             <a
               href={`https://plasmascan.to/address/${distribution.address}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-plasma-accent hover:underline font-mono"
+              className="text-sm text-plasma-accent hover:text-purple-400 font-mono transition-colors"
             >
-              {distribution.address.slice(0, 6)}...{distribution.address.slice(-4)}
+              {shortenAddress(distribution.address)}
             </a>
           </div>
         )}
 
         {distribution.change24h !== undefined && (
           <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-400">24h Change</span>
+            <span className="text-xs text-gray-400 uppercase tracking-wide">24h Change</span>
             <span
-              className={`text-sm font-medium ${
-                distribution.change24h >= 0 ? 'text-green-500' : 'text-red-500'
+              className={`text-sm font-semibold ${
+                distribution.change24h >= 0 ? 'text-green-400' : 'text-red-400'
               }`}
             >
               {distribution.change24h >= 0 ? '+' : ''}
@@ -79,9 +71,9 @@ export const DistributionCard = ({ distribution }: DistributionCardProps) => {
       </div>
 
       {/* Progress bar */}
-      <div className="mt-4 w-full bg-plasma-darker rounded-full h-2">
+      <div className="w-full bg-plasma-dark/50 rounded-full h-1.5 overflow-hidden">
         <div
-          className="h-2 rounded-full transition-all duration-500"
+          className="h-full rounded-full transition-all duration-500 ease-out"
           style={{
             width: `${distribution.percentage}%`,
             backgroundColor: color,
