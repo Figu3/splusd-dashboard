@@ -8,6 +8,9 @@ export const PLASMA_FALLBACK_RPC = 'https://rpc.plasma.to';
 // splUSD Token
 export const SPLUSD_TOKEN_ADDRESS = '0x616185600989Bf8339b58aC9e539d49536598343';
 
+// plUSD Token (used to track share in splUSD)
+export const PLUSD_TOKEN_ADDRESS = '0xf91c31299E998C5127Bc5F11e4a657FC0cF358CD';
+
 // USDT0 Token (used in Euler vaults)
 export const USDT0_TOKEN_ADDRESS = '0x5f0c5F854C2D34F34B69CF63217C0C5EA1F1A13d';
 
@@ -55,6 +58,20 @@ export const ERC20_ABI = [
   'function decimals() view returns (uint8)',
   'function symbol() view returns (string)',
   'function name() view returns (string)',
+  'event Transfer(address indexed from, address indexed to, uint256 value)',
+];
+
+// Euler Vault ABI (for borrower tracking)
+export const EULER_VAULT_ABI = [
+  'function totalBorrows() view returns (uint256)',
+  'function totalAssets() view returns (uint256)',
+  'function balanceOf(address account) view returns (uint256)',
+  'function maxWithdraw(address owner) view returns (uint256)',
+  'function convertToAssets(uint256 shares) view returns (uint256)',
+  'event Borrow(address indexed caller, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)',
+  'event Repay(address indexed caller, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)',
+  'event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares)',
+  'event Withdraw(address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)',
 ];
 
 // Update interval (in milliseconds)

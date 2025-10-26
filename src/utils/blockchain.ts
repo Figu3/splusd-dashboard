@@ -3,15 +3,18 @@ import {
   PLASMA_RPC_URL,
   PLASMA_FALLBACK_RPC,
   SPLUSD_TOKEN_ADDRESS,
+  PLUSD_TOKEN_ADDRESS,
   USDT0_TOKEN_ADDRESS,
   PROTOCOLS,
   ERC20_ABI,
+  EULER_VAULT_ABI,
   KNOWN_CONTRACTS,
 } from '../config';
-import type { TokenDistribution, DashboardData, IdleWalletHistoryPoint, BorrowerDestination } from '../types';
+import type { TokenDistribution, DashboardData, IdleWalletHistoryPoint, TVLHistoryPoint, PLUSDShareData, BorrowerDestination, BorrowerInfo } from '../types';
 
 // Local storage key for historical data
 const HISTORY_STORAGE_KEY = 'splusd_idle_wallet_history';
+const TVL_HISTORY_STORAGE_KEY = 'splusd_tvl_history';
 
 // Euler Vault address
 const EULER_VAULT_ADDRESS = '0x93827c26602b0573500D2eC80dB19D54EEf76BaB';
@@ -101,6 +104,95 @@ const addHistoricalDataPoint = (percentage: number): IdleWalletHistoryPoint[] =>
   }
 
   return history;
+};
+
+// Load TVL historical data from localStorage
+const loadTVLHistoricalData = (): TVLHistoryPoint[] => {
+  try {
+    const stored = localStorage.getItem(TVL_HISTORY_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.error('Error loading TVL historical data:', error);
+  }
+  return [];
+};
+
+// Save TVL historical data to localStorage
+const saveTVLHistoricalData = (history: TVLHistoryPoint[]): void => {
+  try {
+    localStorage.setItem(TVL_HISTORY_STORAGE_KEY, JSON.stringify(history));
+  } catch (error) {
+    console.error('Error saving TVL historical data:', error);
+  }
+};
+
+// Add a new TVL data point to history
+const addTVLHistoricalDataPoint = (tvlRaw: string, tvlFormatted: string): TVLHistoryPoint[] => {
+  const history = loadTVLHistoricalData();
+  const now = Date.now();
+  const newPoint: TVLHistoryPoint = {
+    timestamp: now,
+    tvl: tvlFormatted,
+    tvlRaw: tvlRaw,
+    date: new Date(now).toISOString(),
+  };
+
+  // Only add if it's been at least 5 minutes since last data point
+  // or if this is the first data point
+  if (history.length === 0 || now - history[history.length - 1].timestamp > 5 * 60 * 1000) {
+    history.push(newPoint);
+    // Keep only last 30 days of data
+    const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+    const filteredHistory = history.filter(point => point.timestamp > thirtyDaysAgo);
+    saveTVLHistoricalData(filteredHistory);
+    return filteredHistory;
+  }
+
+  return history;
+};
+
+// Fetch plUSD share in splUSD
+const fetchPLUSDShare = async (
+  provider: ethers.JsonRpcProvider,
+  totalSupplySplUSD: bigint,
+  decimals: number
+): Promise<PLUSDShareData> => {
+  try {
+    const plusdContract = new ethers.Contract(PLUSD_TOKEN_ADDRESS, ERC20_ABI, provider);
+
+    // Get plUSD balance in splUSD contract
+    const plusdBalance = await plusdContract.balanceOf(SPLUSD_TOKEN_ADDRESS);
+
+    // Get splUSD total supply (use the one we already fetched)
+    const splusdTotalSupply = totalSupplySplUSD;
+
+    // Calculate percentage
+    const percentage = splusdTotalSupply > 0n
+      ? Number((plusdBalance * 10000n) / splusdTotalSupply) / 100
+      : 0;
+
+    return {
+      plusdInSplUSD: formatTokenAmount(plusdBalance, decimals),
+      plusdInSplUSDRaw: plusdBalance.toString(),
+      totalSplUSD: formatTokenAmount(splusdTotalSupply, decimals),
+      totalSplUSDRaw: splusdTotalSupply.toString(),
+      percentage,
+      lastUpdate: Date.now(),
+    };
+  } catch (error) {
+    console.error('Error fetching plUSD share:', error);
+    // Return default values on error
+    return {
+      plusdInSplUSD: '0',
+      plusdInSplUSDRaw: '0',
+      totalSplUSD: formatTokenAmount(totalSupplySplUSD, decimals),
+      totalSplUSDRaw: totalSupplySplUSD.toString(),
+      percentage: 0,
+      lastUpdate: Date.now(),
+    };
+  }
 };
 
 // Analyze where borrowed USDT0 from Euler vault goes
@@ -238,6 +330,143 @@ const getDescriptionForType = (type: string): string => {
   }
 };
 
+// Fetch live borrower data from Euler vault
+const fetchLiveBorrowerData = async (provider: ethers.JsonRpcProvider): Promise<BorrowerInfo[]> => {
+  try {
+    const vaultContract = new ethers.Contract(EULER_VAULT_ADDRESS, EULER_VAULT_ABI, provider);
+    const usdt0Contract = new ethers.Contract(USDT0_TOKEN_ADDRESS, ERC20_ABI, provider);
+
+    // Get borrow events from the last 10,000 blocks (approximately 24-48 hours)
+    const currentBlock = await provider.getBlockNumber();
+    const fromBlock = Math.max(0, currentBlock - 10000);
+
+    console.log(`Fetching borrower data from block ${fromBlock} to ${currentBlock}...`);
+
+    // Get all Borrow events
+    const borrowFilter = vaultContract.filters.Borrow();
+    const borrowEvents = await vaultContract.queryFilter(borrowFilter, fromBlock, currentBlock);
+
+    // Extract unique borrower addresses
+    const borrowerAddresses = new Set<string>();
+    for (const event of borrowEvents) {
+      const eventLog = event as ethers.EventLog;
+      if (eventLog.args && eventLog.args[2]) { // owner is the 3rd indexed parameter
+        borrowerAddresses.add(eventLog.args[2] as string);
+      }
+    }
+
+    console.log(`Found ${borrowerAddresses.size} unique borrowers`);
+
+    // Fetch data for each borrower
+    const borrowers: BorrowerInfo[] = [];
+
+    for (const address of Array.from(borrowerAddresses).slice(0, 10)) { // Limit to top 10 borrowers
+      try {
+        // Get collateral (splUSD balance in vault)
+        const collateral = await vaultContract.balanceOf(address);
+
+        // Skip if no collateral
+        if (collateral === 0n) continue;
+
+        // Convert vault shares to assets
+        const collateralAssets = await vaultContract.convertToAssets(collateral);
+        const collateralAmount = formatTokenAmount(collateralAssets, 18);
+
+        // Calculate borrowed amount by analyzing Transfer events from vault to borrower
+        const transferFilter = usdt0Contract.filters.Transfer(EULER_VAULT_ADDRESS, address);
+        const transferEvents = await usdt0Contract.queryFilter(transferFilter, fromBlock, currentBlock);
+
+        let totalBorrowed = 0n;
+        for (const event of transferEvents) {
+          const eventLog = event as ethers.EventLog;
+          if (eventLog.args && eventLog.args[2]) { // value is the 3rd parameter
+            totalBorrowed += BigInt(eventLog.args[2].toString());
+          }
+        }
+
+        if (totalBorrowed === 0n) continue;
+
+        const borrowedAmount = formatTokenAmount(totalBorrowed, 6); // USDT0 has 6 decimals
+
+        // Calculate CR ratio
+        const collateralValue = Number(ethers.formatUnits(collateralAssets, 18));
+        const borrowedValue = Number(ethers.formatUnits(totalBorrowed, 6));
+        const cr = borrowedValue > 0 ? (collateralValue / borrowedValue) * 100 : 0;
+
+        // Track USDT0 usage
+        const actions = await trackUSDT0Usage(provider, address, totalBorrowed, fromBlock, currentBlock);
+
+        borrowers.push({
+          address,
+          borrowedAmount,
+          collateralAmount,
+          collateralizationRatio: cr,
+          actions
+        });
+      } catch (error) {
+        console.warn(`Error fetching data for borrower ${address}:`, error);
+      }
+    }
+
+    console.log(`Successfully fetched data for ${borrowers.length} borrowers`);
+    return borrowers.sort((a, b) => b.collateralizationRatio - a.collateralizationRatio);
+  } catch (error) {
+    console.error('Error fetching live borrower data:', error);
+    return [];
+  }
+};
+
+// Track what borrowers did with their USDT0
+const trackUSDT0Usage = async (
+  provider: ethers.JsonRpcProvider,
+  borrowerAddress: string,
+  totalBorrowed: bigint,
+  fromBlock: number,
+  toBlock: number
+) => {
+  try {
+    const usdt0Contract = new ethers.Contract(USDT0_TOKEN_ADDRESS, ERC20_ABI, provider);
+
+    // Get all USDT0 transfers from the borrower
+    const transferFilter = usdt0Contract.filters.Transfer(borrowerAddress);
+    const transfers = await usdt0Contract.queryFilter(transferFilter, fromBlock, toBlock);
+
+    const destinations: Record<string, bigint> = {};
+
+    for (const transfer of transfers) {
+      const eventLog = transfer as ethers.EventLog;
+      if (eventLog.args && eventLog.args[1] && eventLog.args[2]) { // to and value parameters
+        const dest = (eventLog.args[1] as string).toLowerCase();
+        const value = BigInt(eventLog.args[2].toString());
+        destinations[dest] = (destinations[dest] || 0n) + value;
+      }
+    }
+
+    // Convert to actions
+    const actions = [];
+    for (const [dest, amount] of Object.entries(destinations)) {
+      const known = KNOWN_CONTRACTS[dest];
+      const percentage = Number((amount * 10000n) / totalBorrowed) / 100;
+
+      if (percentage < 1) continue; // Skip small amounts
+
+      actions.push({
+        type: known?.type || 'unknown',
+        protocol: known?.name || `Unknown (${dest.slice(0, 6)}...)`,
+        amount: formatTokenAmount(amount, 6),
+        percentage,
+        description: known ? getDescriptionForType(known.type) : 'Transferred to unknown address',
+        color: getColorForDestinationType(known?.type || 'unknown')
+      });
+    }
+
+    return actions.sort((a, b) => b.percentage - a.percentage);
+  } catch (error) {
+    console.error('Error tracking USDT0 usage:', error);
+    return [];
+  }
+};
+
 // Fetch token distribution data
 export const fetchDistributionData = async (): Promise<DashboardData> => {
   try {
@@ -278,15 +507,22 @@ export const fetchDistributionData = async (): Promise<DashboardData> => {
           address: protocol.addresses[0], // Show primary address
         };
 
-        // For Euler Protocol, analyze borrower destinations
+        // For Euler Protocol, add live borrower data
         if (_key === 'euler') {
           try {
+            // Fetch live borrower information from blockchain
+            const liveBorrowers = await fetchLiveBorrowerData(provider);
+            if (liveBorrowers.length > 0) {
+              distribution.borrowers = liveBorrowers;
+            }
+
+            // Also fetch aggregated borrower destinations for backward compatibility
             const borrowerDestinations = await analyzeBorrowerDestinations(provider);
             if (borrowerDestinations.length > 0) {
               distribution.borrowerDestinations = borrowerDestinations;
             }
           } catch (error) {
-            console.warn('Failed to analyze Euler borrower destinations:', error);
+            console.error('Failed to fetch Euler borrower data:', error);
           }
         }
 
@@ -307,11 +543,22 @@ export const fetchDistributionData = async (): Promise<DashboardData> => {
     // Add current idle wallet percentage to historical data
     const idleWalletHistory = addHistoricalDataPoint(idlePercentage);
 
+    // Add current TVL to historical data
+    const tvlHistory = addTVLHistoricalDataPoint(
+      totalSupply.toString(),
+      formatTokenAmount(totalSupply, decimals)
+    );
+
+    // Fetch plUSD share in splUSD
+    const plusdShare = await fetchPLUSDShare(provider, totalSupply, decimals);
+
     return {
       totalSupply: formatTokenAmount(totalSupply, decimals),
       distributions: distributions.sort((a, b) => b.percentage - a.percentage),
       lastUpdate: Date.now(),
       idleWalletHistory,
+      tvlHistory,
+      plusdShare,
     };
   } catch (error) {
     console.error('Error fetching distribution data:', error);

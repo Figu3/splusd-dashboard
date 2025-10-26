@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { TokenDistribution } from '../types';
 import { PROTOCOLS } from '../config';
 import { BorrowerDestinationList } from './BorrowerDestinationList';
+import { BorrowerDetailsList } from './BorrowerDetailsList';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 interface DistributionCardProps {
@@ -88,8 +89,51 @@ export const DistributionCard = ({ distribution }: DistributionCardProps) => {
         />
       </div>
 
-      {/* Expandable section for Euler borrower destinations */}
-      {distribution.borrowerDestinations && distribution.borrowerDestinations.length > 0 && (
+      {/* Expandable section for Euler borrowers */}
+      {distribution.location === 'Euler Protocol' && (
+        <>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="mt-4 w-full flex items-center justify-between p-3 bg-plasma-darker rounded-lg hover:bg-plasma-dark transition-colors"
+          >
+            <span className="text-sm font-medium text-gray-300 flex items-center gap-2">
+              <span>Borrower Details</span>
+              {distribution.borrowers && distribution.borrowers.length > 0 && (
+                <span className="text-xs text-gray-500">
+                  ({distribution.borrowers.length} {distribution.borrowers.length === 1 ? 'borrower' : 'borrowers'})
+                </span>
+              )}
+            </span>
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            )}
+          </button>
+
+          {isExpanded && (
+            <div className="overflow-hidden transition-all duration-300">
+              {distribution.borrowers && distribution.borrowers.length > 0 ? (
+                <BorrowerDetailsList borrowers={distribution.borrowers} />
+              ) : (
+                <div className="mt-4 p-4 bg-plasma-dark rounded-lg border border-plasma-border">
+                  <p className="text-sm text-gray-400 text-center">
+                    {distribution.borrowers !== undefined
+                      ? 'No active borrowers found in the last 10,000 blocks'
+                      : 'Loading borrower data from blockchain...'}
+                  </p>
+                  <p className="text-xs text-gray-500 text-center mt-2">
+                    Check browser console for details
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Expandable section for legacy borrower destinations */}
+      {!distribution.borrowers && distribution.borrowerDestinations && distribution.borrowerDestinations.length > 0 && (
         <>
           <button
             onClick={() => setIsExpanded(!isExpanded)}

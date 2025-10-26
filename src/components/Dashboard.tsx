@@ -3,13 +3,19 @@ import { Header } from './Header';
 import { DistributionCard } from './DistributionCard';
 import { DistributionChart } from './DistributionChart';
 import { IdleWalletHistoryChart } from './IdleWalletHistoryChart';
+import { TVLHistoryChart } from './TVLHistoryChart';
+import { PLUSDShareCard } from './PLUSDShareCard';
+import { RestakingVault } from './RestakingVault';
 import { ErrorMessage } from './ErrorMessage';
 import { LoadingSpinner } from './LoadingSpinner';
 import type { DashboardData } from '../types';
 import { fetchDistributionData, exportToCSV, exportToJSON } from '../utils/blockchain';
 import { UPDATE_INTERVAL } from '../config';
 
+type TabType = 'distribution' | 'restaking';
+
 export const Dashboard = () => {
+  const [activeTab, setActiveTab] = useState<TabType>('distribution');
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,37 +79,86 @@ export const Dashboard = () => {
           isLoading={isLoading}
         />
 
-        {error && (
-          <div className="mb-6">
-            <ErrorMessage message={error} onRetry={loadData} />
-          </div>
-        )}
+        {/* Tab Navigation */}
+        <div className="mb-6 bg-plasma-card rounded-xl p-2 border border-plasma-border flex gap-2">
+          <button
+            onClick={() => setActiveTab('distribution')}
+            className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all ${
+              activeTab === 'distribution'
+                ? 'bg-gradient-to-r from-plasma-accent to-purple-500 text-white shadow-lg'
+                : 'text-gray-400 hover:text-white hover:bg-plasma-dark/50'
+            }`}
+          >
+            Distribution Dashboard
+          </button>
+          <button
+            onClick={() => setActiveTab('restaking')}
+            className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all ${
+              activeTab === 'restaking'
+                ? 'bg-gradient-to-r from-plasma-accent to-purple-500 text-white shadow-lg'
+                : 'text-gray-400 hover:text-white hover:bg-plasma-dark/50'
+            }`}
+          >
+            Restaking
+          </button>
+        </div>
 
-        {data && data.distributions.length > 0 && (
+        {/* Distribution Tab Content */}
+        {activeTab === 'distribution' && (
           <>
-            {data.idleWalletHistory && data.idleWalletHistory.length > 0 && (
+            {error && (
               <div className="mb-6">
-                <IdleWalletHistoryChart history={data.idleWalletHistory} />
+                <ErrorMessage message={error} onRetry={loadData} />
               </div>
             )}
 
-            <div className="mb-6">
-              <DistributionChart distributions={data.distributions} />
-            </div>
+            {data && data.distributions.length > 0 && (
+              <>
+                {/* TVL History Chart */}
+                {data.tvlHistory && data.tvlHistory.length > 0 && (
+                  <div className="mb-6">
+                    <TVLHistoryChart history={data.tvlHistory} />
+                  </div>
+                )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {data.distributions.map((distribution, index) => (
-                <DistributionCard key={index} distribution={distribution} />
-              ))}
-            </div>
+                {/* plUSD Share Card */}
+                {data.plusdShare && (
+                  <div className="mb-6">
+                    <PLUSDShareCard plusdShare={data.plusdShare} />
+                  </div>
+                )}
+
+                {/* Idle Wallet History Chart */}
+                {data.idleWalletHistory && data.idleWalletHistory.length > 0 && (
+                  <div className="mb-6">
+                    <IdleWalletHistoryChart history={data.idleWalletHistory} />
+                  </div>
+                )}
+
+                {/* Distribution Chart */}
+                <div className="mb-6">
+                  <DistributionChart distributions={data.distributions} />
+                </div>
+
+                {/* Distribution Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {data.distributions.map((distribution, index) => (
+                    <DistributionCard key={index} distribution={distribution} />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {data && data.distributions.length === 0 && !error && (
+              <div className="text-center text-gray-400 py-12">
+                No distribution data available
+              </div>
+            )}
           </>
         )}
 
-        {data && data.distributions.length === 0 && !error && (
-          <div className="text-center text-gray-400 py-12">
-            No distribution data available
-          </div>
-        )}
+        {/* Restaking Tab Content */}
+        {activeTab === 'restaking' && <RestakingVault />}
 
         <footer className="mt-12 text-center text-gray-500 text-sm">
           <p>

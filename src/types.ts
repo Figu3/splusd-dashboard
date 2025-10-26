@@ -1,4 +1,22 @@
-export type DestinationType = 'swap' | 'bridge' | 'deposit' | 'unknown';
+export type DestinationType = 'swap' | 'bridge' | 'deposit' | 'mint' | 'unknown';
+
+export interface BorrowerAction {
+  type: DestinationType;
+  protocol: string;
+  amount: string;
+  percentage: number;
+  token?: string;
+  description: string;
+  color: string;
+}
+
+export interface BorrowerInfo {
+  address: string;
+  borrowedAmount: string;
+  collateralAmount: string;
+  collateralizationRatio: number;
+  actions: BorrowerAction[];
+}
 
 export interface BorrowerDestination {
   protocol: string;
@@ -18,6 +36,7 @@ export interface TokenDistribution {
   change24h?: number;
   address?: string;
   borrowerDestinations?: BorrowerDestination[];
+  borrowers?: BorrowerInfo[];
 }
 
 export interface IdleWalletHistoryPoint {
@@ -26,11 +45,29 @@ export interface IdleWalletHistoryPoint {
   date: string;
 }
 
+export interface TVLHistoryPoint {
+  timestamp: number;
+  tvl: string;
+  tvlRaw: string;
+  date: string;
+}
+
+export interface PLUSDShareData {
+  plusdInSplUSD: string;
+  plusdInSplUSDRaw: string;
+  totalSplUSD: string;
+  totalSplUSDRaw: string;
+  percentage: number;
+  lastUpdate: number;
+}
+
 export interface DashboardData {
   totalSupply: string;
   distributions: TokenDistribution[];
   lastUpdate: number;
   idleWalletHistory?: IdleWalletHistoryPoint[];
+  tvlHistory?: TVLHistoryPoint[];
+  plusdShare?: PLUSDShareData;
   error?: string;
 }
 
