@@ -1,5 +1,4 @@
 import { TrendingUp, Wallet, PieChart, Layers } from 'lucide-react';
-import { QuickStat } from './ui/QuickStat';
 import type { DashboardData } from '../types';
 
 interface QuickStatsProps {
@@ -20,36 +19,80 @@ export const QuickStats = ({ data }: QuickStatsProps) => {
   // Calculate TVL change from history
   const tvlChange = calculateTVLChange(data.tvlHistory || []);
 
+  const stats = [
+    {
+      label: 'Total Value Locked',
+      value: data.totalSupply,
+      icon: TrendingUp,
+      color: '#8b5cf6',
+      change: tvlChange,
+    },
+    {
+      label: 'plUSD Share',
+      value: `${plusdPercentage.toFixed(2)}%`,
+      icon: PieChart,
+      color: '#10b981',
+    },
+    {
+      label: 'Idle Wallets',
+      value: `${idlePercentage.toFixed(2)}%`,
+      icon: Wallet,
+      color: '#6b7280',
+    },
+    {
+      label: 'Active Protocols',
+      value: activeProtocols.toString(),
+      icon: Layers,
+      color: '#f59e0b',
+    },
+  ];
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <QuickStat
-        label="Total Value Locked"
-        value={data.totalSupply}
-        icon={TrendingUp}
-        change={tvlChange}
-        color="#8b5cf6"
-      />
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {stats.map((stat, index) => {
+        const Icon = stat.icon;
+        return (
+          <div
+            key={index}
+            className="bg-plasma-card border border-plasma-border rounded-xl p-6 hover:border-plasma-accent/50 transition-all shadow-lg"
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div
+                className="p-3 rounded-lg"
+                style={{ backgroundColor: `${stat.color}20` }}
+              >
+                <Icon className="w-6 h-6" style={{ color: stat.color }} />
+              </div>
+              {stat.change && (
+                <div
+                  className={`text-xs font-semibold px-2.5 py-1 rounded-md ${
+                    stat.change.value >= 0
+                      ? 'bg-green-500/20 text-green-400'
+                      : 'bg-red-500/20 text-red-400'
+                  }`}
+                >
+                  {stat.change.value >= 0 ? '+' : ''}
+                  {stat.change.value.toFixed(2)}%
+                </div>
+              )}
+            </div>
 
-      <QuickStat
-        label="plUSD Share"
-        value={`${plusdPercentage.toFixed(2)}%`}
-        icon={PieChart}
-        color="#10b981"
-      />
-
-      <QuickStat
-        label="Idle Wallets"
-        value={`${idlePercentage.toFixed(2)}%`}
-        icon={Wallet}
-        color="#6b7280"
-      />
-
-      <QuickStat
-        label="Active Protocols"
-        value={activeProtocols.toString()}
-        icon={Layers}
-        color="#f59e0b"
-      />
+            <div>
+              <p className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-2">
+                {stat.label}
+              </p>
+              <p className="text-white text-3xl font-bold">
+                {stat.value}
+              </p>
+              {stat.change?.label && (
+                <p className="text-gray-500 text-xs mt-2">
+                  {stat.change.label}
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };

@@ -4,9 +4,6 @@ import { QuickStats } from './QuickStats';
 import { DistributionCard } from './DistributionCard';
 import { DistributionChart } from './DistributionChart';
 import { IdleWalletHistoryChart } from './IdleWalletHistoryChart';
-import { TVLHistoryChart } from './TVLHistoryChart';
-import { PLUSDShareCard } from './PLUSDShareCard';
-import { RestakingVault } from './RestakingVault';
 import { ErrorMessage } from './ErrorMessage';
 import { LoadingSpinner } from './LoadingSpinner';
 import { SectionHeader } from './ui/SectionHeader';
@@ -15,10 +12,7 @@ import type { DashboardData } from '../types';
 import { fetchDistributionData, exportToCSV, exportToJSON } from '../utils/blockchain';
 import { UPDATE_INTERVAL } from '../config';
 
-type TabType = 'distribution' | 'restaking';
-
 export const Dashboard = () => {
-  const [activeTab, setActiveTab] = useState<TabType>('distribution');
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,110 +75,67 @@ export const Dashboard = () => {
           isLoading={isLoading}
         />
 
-        {/* Tab Navigation */}
-        <div className="mb-6 bg-plasma-card rounded-xl p-2 border border-plasma-border flex gap-2">
-          <button
-            onClick={() => setActiveTab('distribution')}
-            className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all ${
-              activeTab === 'distribution'
-                ? 'bg-gradient-to-r from-plasma-accent to-purple-500 text-white shadow-lg'
-                : 'text-gray-400 hover:text-white hover:bg-plasma-dark/50'
-            }`}
-          >
-            Distribution Dashboard
-          </button>
-          <button
-            onClick={() => setActiveTab('restaking')}
-            className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all ${
-              activeTab === 'restaking'
-                ? 'bg-gradient-to-r from-plasma-accent to-purple-500 text-white shadow-lg'
-                : 'text-gray-400 hover:text-white hover:bg-plasma-dark/50'
-            }`}
-          >
-            Restaking
-          </button>
-        </div>
+        {error && (
+          <div className="mb-6">
+            <ErrorMessage message={error} onRetry={loadData} />
+          </div>
+        )}
 
-        {/* Distribution Tab Content */}
-        {activeTab === 'distribution' && (
+        {data && data.distributions.length > 0 && (
           <>
-            {error && (
-              <div className="mb-6">
-                <ErrorMessage message={error} onRetry={loadData} />
-              </div>
-            )}
+            {/* Quick Stats */}
+            <QuickStats data={data} />
 
-            {data && data.distributions.length > 0 && (
-              <>
-                {/* Quick Stats */}
-                <QuickStats data={data} />
+            {/* Distribution Section */}
+            <SectionHeader
+              title="Protocol Distribution"
+              subtitle="See how splUSD is distributed across DeFi protocols"
+              icon={BarChart3}
+            />
 
-                {/* TVL & plUSD Charts - Side by Side */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                  {data.tvlHistory && data.tvlHistory.length > 0 && (
-                    <TVLHistoryChart history={data.tvlHistory} />
-                  )}
+            {/* Distribution Chart */}
+            <div className="mb-6">
+              <DistributionChart distributions={data.distributions} />
+            </div>
 
-                  {data.plusdShare && (
-                    <PLUSDShareCard plusdShare={data.plusdShare} />
-                  )}
-                </div>
+            {/* Distribution Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              {data.distributions.map((distribution, index) => (
+                <DistributionCard key={index} distribution={distribution} />
+              ))}
+            </div>
 
-                {/* Distribution Section */}
-                <SectionHeader
-                  title="Protocol Distribution"
-                  subtitle="See how splUSD is distributed across DeFi protocols"
-                  icon={BarChart3}
-                />
-
-                {/* Distribution Chart */}
-                <div className="mb-6">
-                  <DistributionChart distributions={data.distributions} />
-                </div>
-
-                {/* Distribution Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                  {data.distributions.map((distribution, index) => (
-                    <DistributionCard key={index} distribution={distribution} />
-                  ))}
-                </div>
-
-                {/* Idle Wallet History - Collapsible */}
-                {data.idleWalletHistory && data.idleWalletHistory.length > 0 && (
-                  <details className="group mt-6">
-                    <summary className="cursor-pointer list-none">
-                      <div className="bg-plasma-card border border-plasma-border rounded-xl p-4 hover:border-plasma-accent/50 transition-all">
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-300 font-medium">View Idle Wallet History</span>
-                          <svg
-                            className="w-5 h-5 text-gray-400 transition-transform group-open:rotate-180"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </div>
-                      </div>
-                    </summary>
-                    <div className="mt-4">
-                      <IdleWalletHistoryChart history={data.idleWalletHistory} />
+            {/* Idle Wallet History - Collapsible */}
+            {data.idleWalletHistory && data.idleWalletHistory.length > 0 && (
+              <details className="group mt-6">
+                <summary className="cursor-pointer list-none">
+                  <div className="bg-plasma-card border border-plasma-border rounded-xl p-4 hover:border-plasma-accent/50 transition-all">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-300 font-medium">View Idle Wallet History</span>
+                      <svg
+                        className="w-5 h-5 text-gray-400 transition-transform group-open:rotate-180"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
                     </div>
-                  </details>
-                )}
-              </>
-            )}
-
-            {data && data.distributions.length === 0 && !error && (
-              <div className="text-center text-gray-400 py-12">
-                No distribution data available
-              </div>
+                  </div>
+                </summary>
+                <div className="mt-4">
+                  <IdleWalletHistoryChart history={data.idleWalletHistory} />
+                </div>
+              </details>
             )}
           </>
         )}
 
-        {/* Restaking Tab Content */}
-        {activeTab === 'restaking' && <RestakingVault />}
+        {data && data.distributions.length === 0 && !error && (
+          <div className="text-center text-gray-400 py-12">
+            No distribution data available
+          </div>
+        )}
 
         <footer className="mt-12 text-center text-gray-500 text-sm">
           <p>
