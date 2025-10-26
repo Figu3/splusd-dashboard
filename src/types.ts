@@ -32,6 +32,7 @@ export interface PendleBreakdown {
   sy: { amount: string; percentage: number };
   pt: { amount: string; percentage: number };
   yt: { amount: string; percentage: number };
+  lp: { amount: string; percentage: number };
 }
 
 export interface TokenDistribution {

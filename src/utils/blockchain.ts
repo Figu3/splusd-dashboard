@@ -8,6 +8,7 @@ import {
   PENDLE_SY_TOKEN,
   PENDLE_PT_TOKEN,
   PENDLE_YT_TOKEN,
+  PENDLE_LP_TOKEN,
   PROTOCOLS,
   ERC20_ABI,
   EULER_VAULT_ABI,
@@ -156,49 +157,58 @@ const addTVLHistoricalDataPoint = (tvlRaw: string, tvlFormatted: string): TVLHis
   return history;
 };
 
-// Fetch Pendle SY/PT/YT breakdown
+// Fetch Pendle SY/PT/YT/LP breakdown
 const fetchPendleBreakdown = async (
   provider: ethers.JsonRpcProvider,
   decimals: number,
-  _totalPendleBalance: bigint
+  totalPendleBalance: bigint
 ): Promise<PendleBreakdown | null> => {
   try {
     const splUsdContract = new ethers.Contract(SPLUSD_TOKEN_ADDRESS, ERC20_ABI, provider);
+    const ptContract = new ethers.Contract(PENDLE_PT_TOKEN, ERC20_ABI, provider);
+    const ytContract = new ethers.Contract(PENDLE_YT_TOKEN, ERC20_ABI, provider);
+    const lpContract = new ethers.Contract(PENDLE_LP_TOKEN, ERC20_ABI, provider);
 
-    console.log('Checking splUSD balances held by Pendle tokens...');
+    console.log('Fetching Pendle breakdown...');
+    console.log('Total Pendle balance:', ethers.formatUnits(totalPendleBalance, decimals), 'splUSD');
 
-    // The SY token holds the underlying splUSD
-    // PT and YT represent claims on future yield
-    // We need to check how much splUSD each token contract holds
-    const [syHeldSplUsd, ptHeldSplUsd, ytHeldSplUsd] = await Promise.all([
-      splUsdContract.balanceOf(PENDLE_SY_TOKEN),
-      splUsdContract.balanceOf(PENDLE_PT_TOKEN),
-      splUsdContract.balanceOf(PENDLE_YT_TOKEN),
+    // SY token wraps the underlying splUSD - this is the total
+    const syTotalSplUsd = await splUsdContract.balanceOf(PENDLE_SY_TOKEN);
+
+    // Get total supply of PT and YT tokens (they should be equal)
+    const [ptTotalSupply, ytTotalSupply, lpTotalSupply] = await Promise.all([
+      ptContract.totalSupply(),
+      ytContract.totalSupply(),
+      lpContract.totalSupply(),
     ]);
 
-    console.log('SY holds:', ethers.formatUnits(syHeldSplUsd, decimals), 'splUSD');
-    console.log('PT holds:', ethers.formatUnits(ptHeldSplUsd, decimals), 'splUSD');
-    console.log('YT holds:', ethers.formatUnits(ytHeldSplUsd, decimals), 'splUSD');
+    console.log('SY holds (total underlying):', ethers.formatUnits(syTotalSplUsd, decimals), 'splUSD');
+    console.log('PT total supply:', ethers.formatUnits(ptTotalSupply, decimals));
+    console.log('YT total supply:', ethers.formatUnits(ytTotalSupply, decimals));
+    console.log('LP total supply:', ethers.formatUnits(lpTotalSupply, decimals));
 
-    const totalTrackedBalance = syHeldSplUsd + ptHeldSplUsd + ytHeldSplUsd;
-
-    if (totalTrackedBalance === 0n) {
-      console.log('No splUSD found in Pendle token contracts');
+    // Use the total Pendle balance as the base for percentages
+    if (totalPendleBalance === 0n) {
+      console.log('No Pendle balance found');
       return null;
     }
 
     return {
       sy: {
-        amount: formatTokenAmount(syHeldSplUsd, decimals),
-        percentage: Number((syHeldSplUsd * 10000n) / totalTrackedBalance) / 100,
+        amount: formatTokenAmount(syTotalSplUsd, decimals),
+        percentage: Number((syTotalSplUsd * 10000n) / totalPendleBalance) / 100,
       },
       pt: {
-        amount: formatTokenAmount(ptHeldSplUsd, decimals),
-        percentage: Number((ptHeldSplUsd * 10000n) / totalTrackedBalance) / 100,
+        amount: formatTokenAmount(ptTotalSupply, decimals),
+        percentage: Number((ptTotalSupply * 10000n) / totalPendleBalance) / 100,
       },
       yt: {
-        amount: formatTokenAmount(ytHeldSplUsd, decimals),
-        percentage: Number((ytHeldSplUsd * 10000n) / totalTrackedBalance) / 100,
+        amount: formatTokenAmount(ytTotalSupply, decimals),
+        percentage: Number((ytTotalSupply * 10000n) / totalPendleBalance) / 100,
+      },
+      lp: {
+        amount: formatTokenAmount(lpTotalSupply, decimals),
+        percentage: Number((lpTotalSupply * 10000n) / totalPendleBalance) / 100,
       },
     };
   } catch (error) {
