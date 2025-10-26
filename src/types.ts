@@ -28,6 +28,12 @@ export interface BorrowerDestination {
   description?: string;
 }
 
+export interface PendleBreakdown {
+  sy: { amount: string; percentage: number };
+  pt: { amount: string; percentage: number };
+  yt: { amount: string; percentage: number };
+}
+
 export interface TokenDistribution {
   location: string;
   amount: string;
@@ -37,6 +43,7 @@ export interface TokenDistribution {
   address?: string;
   borrowerDestinations?: BorrowerDestination[];
   borrowers?: BorrowerInfo[];
+  pendleBreakdown?: PendleBreakdown;
 }
 
 export interface IdleWalletHistoryPoint {

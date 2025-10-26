@@ -14,6 +14,11 @@ export const PLUSD_TOKEN_ADDRESS = '0xf91c31299E998C5127Bc5F11e4a657FC0cF358CD';
 // USDT0 Token (used in Euler vaults)
 export const USDT0_TOKEN_ADDRESS = '0x5f0c5F854C2D34F34B69CF63217C0C5EA1F1A13d';
 
+// Pendle Token Addresses
+export const PENDLE_SY_TOKEN = '0xad96C88eC5D39fc5020851075ECb756B2b228060';
+export const PENDLE_PT_TOKEN = '0xa6c55e31154d39bb0aa3ca2ff9f7665bda4e47fc';
+export const PENDLE_YT_TOKEN = '0x13e695e95601545657caaa7cd62a22fa87b62bdd';
+
 // Protocol Configurations
 export const PROTOCOLS: Record<string, ProtocolConfig> = {
   lithos: {

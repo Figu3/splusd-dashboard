@@ -5,12 +5,15 @@ import {
   SPLUSD_TOKEN_ADDRESS,
   PLUSD_TOKEN_ADDRESS,
   USDT0_TOKEN_ADDRESS,
+  PENDLE_SY_TOKEN,
+  PENDLE_PT_TOKEN,
+  PENDLE_YT_TOKEN,
   PROTOCOLS,
   ERC20_ABI,
   EULER_VAULT_ABI,
   KNOWN_CONTRACTS,
 } from '../config';
-import type { TokenDistribution, DashboardData, IdleWalletHistoryPoint, TVLHistoryPoint, PLUSDShareData, BorrowerDestination, BorrowerInfo } from '../types';
+import type { TokenDistribution, DashboardData, IdleWalletHistoryPoint, TVLHistoryPoint, PLUSDShareData, PendleBreakdown, BorrowerDestination, BorrowerInfo } from '../types';
 
 // Local storage key for historical data
 const HISTORY_STORAGE_KEY = 'splusd_idle_wallet_history';
@@ -151,6 +154,49 @@ const addTVLHistoricalDataPoint = (tvlRaw: string, tvlFormatted: string): TVLHis
   }
 
   return history;
+};
+
+// Fetch Pendle SY/PT/YT breakdown
+const fetchPendleBreakdown = async (
+  provider: ethers.JsonRpcProvider,
+  decimals: number
+): Promise<PendleBreakdown | null> => {
+  try {
+    const syContract = new ethers.Contract(PENDLE_SY_TOKEN, ERC20_ABI, provider);
+    const ptContract = new ethers.Contract(PENDLE_PT_TOKEN, ERC20_ABI, provider);
+    const ytContract = new ethers.Contract(PENDLE_YT_TOKEN, ERC20_ABI, provider);
+
+    // Fetch balances in parallel
+    const [syBalance, ptBalance, ytBalance] = await Promise.all([
+      syContract.balanceOf(SPLUSD_TOKEN_ADDRESS),
+      ptContract.balanceOf(SPLUSD_TOKEN_ADDRESS),
+      ytContract.balanceOf(SPLUSD_TOKEN_ADDRESS),
+    ]);
+
+    const totalPendleBalance = syBalance + ptBalance + ytBalance;
+
+    if (totalPendleBalance === 0n) {
+      return null;
+    }
+
+    return {
+      sy: {
+        amount: formatTokenAmount(syBalance, decimals),
+        percentage: Number((syBalance * 10000n) / totalPendleBalance) / 100,
+      },
+      pt: {
+        amount: formatTokenAmount(ptBalance, decimals),
+        percentage: Number((ptBalance * 10000n) / totalPendleBalance) / 100,
+      },
+      yt: {
+        amount: formatTokenAmount(ytBalance, decimals),
+        percentage: Number((ytBalance * 10000n) / totalPendleBalance) / 100,
+      },
+    };
+  } catch (error) {
+    console.error('Error fetching Pendle breakdown:', error);
+    return null;
+  }
 };
 
 // Fetch plUSD share in splUSD
@@ -526,6 +572,18 @@ export const fetchDistributionData = async (): Promise<DashboardData> => {
           }
         }
 
+        // For Pendle Protocol, add SY/PT/YT breakdown
+        if (_key === 'pendle') {
+          try {
+            const pendleBreakdown = await fetchPendleBreakdown(provider, decimals);
+            if (pendleBreakdown) {
+              distribution.pendleBreakdown = pendleBreakdown;
+            }
+          } catch (error) {
+            console.error('Failed to fetch Pendle breakdown:', error);
+          }
+        }
+
         distributions.push(distribution);
       }
     }
@@ -534,11 +592,11 @@ export const fetchDistributionData = async (): Promise<DashboardData> => {
     const idleBalance = totalSupply - totalProtocolBalance;
     const idlePercentage = Number((idleBalance * 10000n) / totalSupply) / 100;
 
-    distributions.unshift({
+    const idleWalletDist = {
       location: 'Idle Wallets',
       amount: formatTokenAmount(idleBalance, decimals),
       percentage: idlePercentage,
-    });
+    };
 
     // Add current idle wallet percentage to historical data
     const idleWalletHistory = addHistoricalDataPoint(idlePercentage);
@@ -552,9 +610,13 @@ export const fetchDistributionData = async (): Promise<DashboardData> => {
     // Fetch plUSD share in splUSD
     const plusdShare = await fetchPLUSDShare(provider, totalSupply, decimals);
 
+    // Sort distributions by percentage (descending) and put Idle Wallets at the end
+    const sortedDistributions = distributions.sort((a, b) => b.percentage - a.percentage);
+    sortedDistributions.push(idleWalletDist);
+
     return {
       totalSupply: formatTokenAmount(totalSupply, decimals),
-      distributions: distributions.sort((a, b) => b.percentage - a.percentage),
+      distributions: sortedDistributions,
       lastUpdate: Date.now(),
       idleWalletHistory,
       tvlHistory,

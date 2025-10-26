@@ -81,6 +81,68 @@ export const DistributionCard = ({ distribution }: DistributionCardProps) => {
         />
       </div>
 
+      {/* Expandable section for Pendle breakdown */}
+      {distribution.location === 'Pendle Protocol' && distribution.pendleBreakdown && (
+        <>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="mt-4 w-full flex items-center justify-between p-3 bg-plasma-darker rounded-lg hover:bg-plasma-dark transition-colors"
+          >
+            <span className="text-sm font-medium text-gray-300">
+              SY/PT/YT Breakdown
+            </span>
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            )}
+          </button>
+
+          {isExpanded && (
+            <div className="mt-3 space-y-2">
+              <div className="p-3 bg-plasma-dark rounded-lg border border-plasma-border">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-gray-400">SY Token</span>
+                  <span className="text-sm font-semibold text-white">
+                    {distribution.pendleBreakdown.sy.percentage.toFixed(2)}%
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-500">Amount</span>
+                  <span className="text-xs text-gray-300">{distribution.pendleBreakdown.sy.amount}</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-plasma-dark rounded-lg border border-plasma-border">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-gray-400">PT Token</span>
+                  <span className="text-sm font-semibold text-white">
+                    {distribution.pendleBreakdown.pt.percentage.toFixed(2)}%
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-500">Amount</span>
+                  <span className="text-xs text-gray-300">{distribution.pendleBreakdown.pt.amount}</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-plasma-dark rounded-lg border border-plasma-border">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-gray-400">YT Token</span>
+                  <span className="text-sm font-semibold text-white">
+                    {distribution.pendleBreakdown.yt.percentage.toFixed(2)}%
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-500">Amount</span>
+                  <span className="text-xs text-gray-300">{distribution.pendleBreakdown.yt.amount}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
       {/* Expandable section for Euler borrowers */}
       {distribution.location === 'Euler Protocol' && (
         <>
