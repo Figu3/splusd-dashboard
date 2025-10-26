@@ -3,7 +3,6 @@ import { Header } from './Header';
 import { QuickStats } from './QuickStats';
 import { DistributionCard } from './DistributionCard';
 import { DistributionChart } from './DistributionChart';
-import { IdleWalletHistoryChart } from './IdleWalletHistoryChart';
 import { ErrorMessage } from './ErrorMessage';
 import { LoadingSpinner } from './LoadingSpinner';
 import { SectionHeader } from './ui/SectionHeader';
@@ -104,30 +103,6 @@ export const Dashboard = () => {
                 <DistributionCard key={index} distribution={distribution} />
               ))}
             </div>
-
-            {/* Idle Wallet History - Collapsible */}
-            {data.idleWalletHistory && data.idleWalletHistory.length > 0 && (
-              <details className="group mt-6 max-w-4xl mx-auto">
-                <summary className="cursor-pointer list-none">
-                  <div className="bg-plasma-card border border-plasma-border rounded-xl p-4 hover:border-plasma-accent/50 transition-all">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-300 font-medium text-sm">View Idle Wallet History</span>
-                      <svg
-                        className="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                  </div>
-                </summary>
-                <div className="mt-4">
-                  <IdleWalletHistoryChart history={data.idleWalletHistory} />
-                </div>
-              </details>
-            )}
           </>
         )}
 
