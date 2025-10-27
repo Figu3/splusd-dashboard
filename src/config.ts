@@ -53,7 +53,7 @@ export const PROTOCOLS: Record<string, ProtocolConfig> = {
   balancer: {
     name: 'Balancer',
     addresses: [
-      '0xdb5617517f53ea689d773ebde54947b597e32f81', // splUSD Balancer Pool
+      '0xbA1333333333a1BA1108E8412f11850A5C319bA9', // Balancer V2 Vault (holds all pool tokens)
     ],
     color: '#1e293b',
   },
