@@ -50,6 +50,13 @@ export const PROTOCOLS: Record<string, ProtocolConfig> = {
     ],
     color: '#f59e0b',
   },
+  balancer: {
+    name: 'Balancer',
+    addresses: [
+      '0xdb5617517f53ea689d773ebde54947b597e32f81', // splUSD Balancer Pool
+    ],
+    color: '#1e293b',
+  },
   other: {
     name: 'Other Protocols',
     addresses: [],
@@ -93,6 +100,9 @@ export const KNOWN_CONTRACTS: Record<string, { name: string; type: 'swap' | 'bri
   // Pendle (Deposits)
   '0x888888888889758F76e7103c6CbF23ABbF58F946': { name: 'Pendle Router', type: 'deposit' },
   '0xad96C88eC5D39fc5020851075ECb756B2b228060': { name: 'Pendle LP Contract', type: 'deposit' },
+
+  // Balancer (Deposits)
+  '0xdb5617517f53ea689d773ebde54947b597e32f81': { name: 'Balancer splUSD Pool', type: 'deposit' },
 
   // Bridges (common bridge contracts)
   '0x10E6593CDda8c58a1d0f14C5164B376352a55f2F': { name: 'Stargate Bridge', type: 'bridge' },
