@@ -57,6 +57,13 @@ export const PROTOCOLS: Record<string, ProtocolConfig> = {
     ],
     color: '#1e293b',
   },
+  redemption: {
+    name: 'Redemption Vault',
+    addresses: [
+      '0x69EcaB6aA7bDFDdD99deF0891c0317076430ae50', // Redemption Vault
+    ],
+    color: '#ef4444',
+  },
   other: {
     name: 'Other Protocols',
     addresses: [],

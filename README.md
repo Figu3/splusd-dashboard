@@ -22,7 +22,9 @@ The dashboard monitors splUSD distribution across:
 2. **Lithos DEX** - Plasma's native ve(3,3) decentralized exchange
 3. **Pendle Protocol** - Yield trading and tokenization platform
 4. **Euler Protocol** - Permissionless lending and borrowing
-5. **Other DeFi Protocols** - Additional DeFi integrations
+5. **Balancer** - Automated portfolio manager and liquidity provider
+6. **Redemption Vault** - splUSD redemption mechanism
+7. **Other DeFi Protocols** - Additional DeFi integrations
 
 ## Technology Stack
 

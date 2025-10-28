@@ -89,14 +89,33 @@ Pendle is a yield trading platform that enables users to tokenize and trade futu
 
 Euler is a permissionless lending protocol.
 
-### Status
-- **Deployment**: Confirmed on Plasma mainnet
-- **Launch Date**: September 25, 2025 (with Plasma mainnet)
-- **Contract Addresses**: To be added when identified
-
-Euler contracts on Plasma are currently being identified. The protocol is integrated with Plasma's $2B+ DeFi ecosystem but specific contract addresses are pending discovery through on-chain analysis.
+### Core Contracts
+- **Euler Frontier Vault**: `0x93827c26602b0573500D2eC80dB19D54EEf76BaB`
+  - Used for: Lending and borrowing splUSD
 
 **Documentation**: [Euler Finance](https://www.euler.finance)
+
+---
+
+## Balancer Protocol Contracts
+
+Balancer is an automated portfolio manager and liquidity provider.
+
+### Core Contracts
+- **Balancer V2 Vault**: `0xbA1333333333a1BA1108E8412f11850A5C319bA9`
+  - Used for: Holds all pool tokens and manages swaps
+
+**Documentation**: [Balancer Docs](https://docs.balancer.fi)
+
+---
+
+## Redemption Vault
+
+The Redemption Vault allows users to redeem splUSD.
+
+### Core Contracts
+- **Redemption Vault**: `0x69EcaB6aA7bDFDdD99deF0891c0317076430ae50`
+  - Used for: splUSD redemption mechanism
 
 ---
 
